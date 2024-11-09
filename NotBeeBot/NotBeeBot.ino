@@ -1,30 +1,58 @@
-#include "MotorController.h"
+#define IR_USE_AVR_TIMER1
+#define IR_SEND_PIN 8
+#define USE_NO_SEND_PWM 1
 
+#include <IRremote.hpp>
+
+#include "DistanceController.h"
+#include "MotorController.h"
+#include "SoundController.h"
+
+const unsigned long sound_beep = 300000;
+const unsigned long run_15cm = 400000;
+const unsigned long run_90deg = 250000;
 const unsigned int motor_speed = 200;
 
-unsigned long loop_time;
-unsigned long run_time = 400000;
+const int irPin = 7;
+const int triggerPin = 9;
+const int echoPin = 10;
+const int buzzerPin = 11;
+
+const float stopDistance = 7;
+
+unsigned long microsecondsSinceBoot;
 
 MotorController motors;
+SoundController sound;
+DistanceController distance;
 
 void setup()
 {
   motors.Initialise(motor_speed);
+  sound.Initialise(buzzerPin);
+  distance.Initialise(triggerPin, echoPin);
 
-  // Run motors forward for 5cm
-  motors.Forward(5);
+  Serial.begin(9600);
+
+  IrReceiver.begin(irPin, false);
 }
 
 void loop()
 {
-  loop_time = micros();
-
-  motors.Update(loop_time);
-
-  if (loop_time > run_time)
+  if (IrReceiver.decode())
   {
-    motors.Stop();
+    Serial.println(IrReceiver.decodedIRData.command, HEX);
+    IrReceiver.resume();
   }
 
-  delay(1);
+  microsecondsSinceBoot = micros();
+  motors.Update(microsecondsSinceBoot);
+  sound.Update(microsecondsSinceBoot);
+  float currentDistance = distance.Update(microsecondsSinceBoot);
+
+  if (currentDistance < stopDistance)
+  {
+    sound.On(microsecondsSinceBoot, sound_beep);
+    motors.Stop();
+  }
 }
