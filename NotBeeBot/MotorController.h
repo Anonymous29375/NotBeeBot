@@ -12,7 +12,7 @@ class MotorController
 public:
   MotorController(int m1EnablePin, int m1Output1, int m1Output2, int m2EnablePin, int m2Output1, int m2Output2);
   void Initialise();
-  void Update(unsigned long microsSinceStart);
+  bool Update(unsigned long microsSinceStart);
 
   void Forward(unsigned long microsSinceBoot, unsigned long howLongToRun);
   void Backward(unsigned long microsSinceBoot, unsigned long howLongToRun);

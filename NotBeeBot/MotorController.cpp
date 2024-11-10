@@ -21,14 +21,15 @@ void MotorController::Initialise()
   Stop();
 }
 
-void MotorController::Update(unsigned long microsSinceBoot)
+bool MotorController::Update(unsigned long microsSinceBoot)
 {
   if (motorStatus == MOTOR_STATUS_STOPPED || microsSinceBoot > motorEndTime)
   {
     // Stop the motors if we have passed end time
     Stop();
-    return;
   }
+
+    return IsRunning();
 }
 
 bool MotorController::IsRunning()
