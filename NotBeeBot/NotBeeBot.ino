@@ -9,7 +9,7 @@
 #include "BuzzerController.h"
 #include "IRCodes.h"
 
-const unsigned long soundBeep = 300000;
+const unsigned long soundBeep = 500000;
 const unsigned long run15cm = 400000;
 const unsigned long run90deg = 250000;
 
@@ -53,6 +53,10 @@ int programStep = 0;
 
 // Will be set to true if a program step is currently running
 bool stepExecuting = false;
+
+// The IR remote sends multiple commands for a keypress so we want to ignore keys for a little while
+const unsigned long ignoreCommandTime = 800000; // 800 us
+unsigned long ignoreIRCommandsEndTime = 0;
 
 const int PGM_FORWARD = 1;
 const int PGM_BACKWARD = 2;
@@ -101,9 +105,6 @@ void UpdateProgram(int command)
 
     PrintProgramSteps();
 
-    // Debounce key press
-    delay(800);
-
     // Return if next code not the program button
     if (command != IR_PROGRAM)
     {
@@ -137,9 +138,6 @@ void UpdateProgram(int command)
   }
 
   PrintProgramSteps();
-
-  // Debounce key press
-  delay(800);
 }
 
 void StopProgram()
@@ -211,8 +209,6 @@ void ProcessCommand(int command, bool distanceClose)
     buzzer.On(microsecondsSinceBoot, soundBeep);
     Serial.println("Entering program mode...");
 
-    // Debounce key press
-    delay(800);
     break;
 
   case IR_GO:
@@ -234,16 +230,12 @@ void ProcessCommand(int command, bool distanceClose)
       Serial.println("Program go!");
     }
 
-    // Debounce key press
-    delay(800);
     break;
 
   case IR_CLEAR:
     StopProgram();
     programSteps = 0;
 
-    // Debounce key press
-    delay(800);
     break;
 
   case IR_FORWARD:
@@ -319,13 +311,20 @@ void loop()
     {
       int command = IrReceiver.decodedIRData.command;
 
-      if (inProgramMode)
+      // Only process if the code has changed
+      if (microsecondsSinceBoot > ignoreIRCommandsEndTime)
       {
-        UpdateProgram(command);
-      }
-      else
-      {
-        ProcessCommand(command, distanceClose);
+        // Ignore commands for a bit to debounce key presses
+        ignoreIRCommandsEndTime = microsecondsSinceBoot + ignoreCommandTime;
+
+        if (inProgramMode)
+        {
+          UpdateProgram(command);
+        }
+        else
+        {
+          ProcessCommand(command, distanceClose);
+        }
       }
 
       IrReceiver.resume();
