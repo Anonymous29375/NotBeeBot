@@ -34,7 +34,8 @@ MotorController motors(m1EnablePin, m1Output1Pin, m1Output2Pin, m2EnablePin, m2O
 BuzzerController buzzer;
 DistanceController distance;
 
-void setup() {
+void setup()
+{
   motors.Initialise();
   buzzer.Initialise(buzzerPin);
   distance.Initialise(triggerPin, echoPin);
@@ -44,45 +45,67 @@ void setup() {
   IrReceiver.begin(irPin, false);
 }
 
-void loop() {
+void loop()
+{
   microsecondsSinceBoot = micros();
 
-  if (IrReceiver.decode()) {
-    switch (IrReceiver.decodedIRData.command) {
-      case IR_PROGRAM:
-        motors.Stop();
-        buzzer.On(microsecondsSinceBoot, soundBeep);
-        break;
+  float currentDistance = distance.Update(microsecondsSinceBoot);
+  bool distanceClose = currentDistance < stopDistance;
 
-      case IR_FORWARD:
+  if (distanceClose)
+  {
+    motors.Stop();
+  }
+
+  if (IrReceiver.decode())
+  {
+    switch (IrReceiver.decodedIRData.command)
+    {
+    case IR_PROGRAM:
+      motors.Stop();
+      buzzer.On(microsecondsSinceBoot, soundBeep);
+      break;
+
+    case IR_FORWARD:
+      if (distanceClose)
+      {
+        buzzer.On(microsecondsSinceBoot, soundBeep);
+      }
+      else
+      {
         motors.Forward(microsecondsSinceBoot, run15cm);
-        buzzer.On(microsecondsSinceBoot, soundBeep);
-        break;
+      }
+      break;
 
-      case IR_BACKWARD:
-        motors.Backward(microsecondsSinceBoot, run15cm);
-        buzzer.On(microsecondsSinceBoot, soundBeep);
-        break;
+    case IR_BACKWARD:
+      motors.Backward(microsecondsSinceBoot, run15cm);
+      break;
 
-      case IR_LEFT:
-        motors.TurnLeft(microsecondsSinceBoot, run90deg) ;
+    case IR_LEFT:
+      if (distanceClose)
+      {
         buzzer.On(microsecondsSinceBoot, soundBeep);
-        break;
+      }
+      else
+      {
+        motors.TurnLeft(microsecondsSinceBoot, run90deg);
+      }
+      break;
 
-      case IR_RIGHT:
-        motors.TurnRight(microsecondsSinceBoot, run90deg) ;
+    case IR_RIGHT:
+      if (distanceClose)
+      {
         buzzer.On(microsecondsSinceBoot, soundBeep);
-        break;
+      }
+      else
+      {
+        motors.TurnRight(microsecondsSinceBoot, run90deg);
+      }
+      break;
     }
     IrReceiver.resume();
   }
 
   motors.Update(microsecondsSinceBoot);
   buzzer.Update(microsecondsSinceBoot);
-  float currentDistance = distance.Update(microsecondsSinceBoot);
-  bool distanceClose = currentDistance < stopDistance;
-
-  if(distanceClose) {
-    motors.Stop();
-  }
 }
