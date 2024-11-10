@@ -26,7 +26,7 @@ const int m2EnablePin = 5;
 const int m2Output1Pin = 12;
 const int m2Output2Pin = 6;
 
-const float stopDistance = 7;
+const float stopDistance = 10; // 10 cm
 
 unsigned long microsecondsSinceBoot;
 
@@ -53,6 +53,9 @@ int programStep = 0;
 
 // Will be set to true if a program step is currently running
 bool stepExecuting = false;
+
+// We need to know if moving forward so that we can stop if distance senor triggered
+bool movingForward = true;
 
 // The IR remote sends multiple commands for a keypress so we want to ignore keys for a little while
 const unsigned long ignoreCommandTime = 800000; // 800 us
@@ -169,10 +172,13 @@ void RunProgram()
   Serial.println("");
   stepExecuting = true;
 
+  movingForward = false;
+
   switch (programCommand)
   {
   case PGM_FORWARD:
     motors.Forward(microsecondsSinceBoot, run15cm);
+    movingForward = true;
     break;
   case PGM_BACKWARD:
     motors.Backward(microsecondsSinceBoot, run15cm);
@@ -201,6 +207,8 @@ void RunProgram()
 
 void ProcessCommand(int command, bool distanceClose)
 {
+  movingForward = false;
+
   switch (command)
   {
   case IR_PROGRAM:
@@ -239,6 +247,7 @@ void ProcessCommand(int command, bool distanceClose)
     break;
 
   case IR_FORWARD:
+    // Cannot move forward iftoo close to an object
     if (distanceClose)
     {
       buzzer.On(microsecondsSinceBoot, soundBeep);
@@ -246,6 +255,7 @@ void ProcessCommand(int command, bool distanceClose)
     else
     {
       motors.Forward(microsecondsSinceBoot, run15cm);
+      movingForward = true;
     }
     break;
 
@@ -254,25 +264,11 @@ void ProcessCommand(int command, bool distanceClose)
     break;
 
   case IR_LEFT:
-    if (distanceClose)
-    {
-      buzzer.On(microsecondsSinceBoot, soundBeep);
-    }
-    else
-    {
-      motors.TurnLeft(microsecondsSinceBoot, run90deg);
-    }
+    motors.TurnLeft(microsecondsSinceBoot, run90deg);
     break;
 
   case IR_RIGHT:
-    if (distanceClose)
-    {
-      buzzer.On(microsecondsSinceBoot, soundBeep);
-    }
-    else
-    {
-      motors.TurnRight(microsecondsSinceBoot, run90deg);
-    }
+    motors.TurnRight(microsecondsSinceBoot, run90deg);
     break;
   }
 }
@@ -295,7 +291,7 @@ void loop()
   float currentDistance = distance.Update(microsecondsSinceBoot);
   bool distanceClose = currentDistance < stopDistance;
 
-  if (distanceClose)
+  if (distanceClose && movingForward)
   {
     motors.Stop();
   }
