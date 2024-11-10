@@ -46,13 +46,27 @@ void MotorController::StartRunning(unsigned long startTime, unsigned int motor1D
   case FORWARD:
     digitalWrite(m1Output1, LOW);
     digitalWrite(m1Output2, HIGH);
-    digitalWrite(m2Output1, LOW);
-    digitalWrite(m2Output2, HIGH);
     break;
 
   case BACKWARD:
     digitalWrite(m1Output1, HIGH);
     digitalWrite(m1Output2, LOW);
+    break;
+
+  default:
+    // If there is an unknown state then stop and return (fail safe)
+    Stop();
+    return;
+  }
+
+  switch (motor2Direction)
+  {
+  case FORWARD:
+    digitalWrite(m2Output1, LOW);
+    digitalWrite(m2Output2, HIGH);
+    break;
+
+  case BACKWARD:
     digitalWrite(m2Output1, HIGH);
     digitalWrite(m2Output2, LOW);
     break;
@@ -83,13 +97,13 @@ void MotorController::Backward(unsigned long microsSinceBoot, unsigned long howL
 void MotorController::TurnLeft(unsigned long microsSinceBoot, unsigned long howLongToRun)
 {
   motorStatus = MOTOR_STATUS_TURN_LEFT;
-  StartRunning(microsSinceBoot, FORWARD, BACKWARD, howLongToRun);
+  StartRunning(microsSinceBoot, BACKWARD, FORWARD, howLongToRun);
 }
 
 void MotorController::TurnRight(unsigned long microsSinceBoot, unsigned long howLongToRun)
 {
   motorStatus = MOTOR_STATUS_TURN_RIGHT;
-  StartRunning(microsSinceBoot, BACKWARD, FORWARD, howLongToRun);
+  StartRunning(microsSinceBoot, FORWARD, BACKWARD, howLongToRun);
 }
 
 void MotorController::Stop()

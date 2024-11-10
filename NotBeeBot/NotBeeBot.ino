@@ -7,10 +7,11 @@
 #include "DistanceController.h"
 #include "MotorController.h"
 #include "BuzzerController.h"
+#include "IRCodes.h"
 
-const unsigned long sound_beep = 300000;
-const unsigned long run_15cm = 400000;
-const unsigned long run_90deg = 250000;
+const unsigned long soundBeep = 300000;
+const unsigned long run15cm = 400000;
+const unsigned long run90deg = 250000;
 
 const int irPin = 7;
 const int triggerPin = 9;
@@ -25,18 +26,17 @@ const int m2EnablePin = 5;
 const int m2Output1Pin = 12;
 const int m2Output2Pin = 6;
 
-
 const float stopDistance = 7;
 
 unsigned long microsecondsSinceBoot;
 
 MotorController motors(m1EnablePin, m1Output1Pin, m1Output2Pin, m2EnablePin, m2Output1Pin, m2Output2Pin);
-BuzzerController sound;
+BuzzerController buzzer;
 DistanceController distance;
 
 void setup() {
   motors.Initialise();
-  sound.Initialise(buzzerPin);
+  buzzer.Initialise(buzzerPin);
   distance.Initialise(triggerPin, echoPin);
 
   Serial.begin(9600);
@@ -45,22 +45,44 @@ void setup() {
 }
 
 void loop() {
+  microsecondsSinceBoot = micros();
+
   if (IrReceiver.decode()) {
-    Serial.println(IrReceiver.decodedIRData.command, HEX);
+    switch (IrReceiver.decodedIRData.command) {
+      case IR_PROGRAM:
+        motors.Stop();
+        buzzer.On(microsecondsSinceBoot, soundBeep);
+        break;
+
+      case IR_FORWARD:
+        motors.Forward(microsecondsSinceBoot, run15cm);
+        buzzer.On(microsecondsSinceBoot, soundBeep);
+        break;
+
+      case IR_BACKWARD:
+        motors.Backward(microsecondsSinceBoot, run15cm);
+        buzzer.On(microsecondsSinceBoot, soundBeep);
+        break;
+
+      case IR_LEFT:
+        motors.TurnLeft(microsecondsSinceBoot, run90deg) ;
+        buzzer.On(microsecondsSinceBoot, soundBeep);
+        break;
+
+      case IR_RIGHT:
+        motors.TurnRight(microsecondsSinceBoot, run90deg) ;
+        buzzer.On(microsecondsSinceBoot, soundBeep);
+        break;
+    }
     IrReceiver.resume();
   }
 
-  microsecondsSinceBoot = micros();
   motors.Update(microsecondsSinceBoot);
-  sound.Update(microsecondsSinceBoot);
+  buzzer.Update(microsecondsSinceBoot);
   float currentDistance = distance.Update(microsecondsSinceBoot);
-
   bool distanceClose = currentDistance < stopDistance;
 
-  if (distanceClose) {
-    sound.On(microsecondsSinceBoot, sound_beep);
-    motors.Backward(micros(), 4000000000);
-  } else {
+  if(distanceClose) {
     motors.Stop();
   }
 }
