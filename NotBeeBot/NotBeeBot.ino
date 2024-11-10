@@ -212,8 +212,12 @@ void ProcessCommand(int command, bool distanceClose)
   switch (command)
   {
   case IR_PROGRAM:
-    StopProgram();
+  // Clear any existing program
+    ClearProgram();
+
+    // Now in programming mode
     inProgramMode = true;
+    
     buzzer.On(microsecondsSinceBoot, soundBeep);
     Serial.println("Entering program mode...");
 
