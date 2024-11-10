@@ -1,23 +1,24 @@
 #include <Arduino.h>
 #include "MotorController.h"
 
-MotorController::MotorController()
-    : motor1(1), motor2(2)
+MotorController::MotorController(int m1EnablePin, int m1Output1, int m1Output2, int m2EnablePin, int m2Output1, int m2Output2)
+    : m1EnablePin(m1EnablePin), m1Output1(m1Output1), m1Output2(m1Output2), m2EnablePin(m2EnablePin), m2Output1(m2Output1), m2Output2(m2Output2)
 {
   // Initialise to a stopped state
   Stop();
 }
 
-void MotorController::Initialise(unsigned int motor_speed)
+void MotorController::Initialise()
 {
-  // Set initial speed of the motor & stop
-  motorSpeed = motor_speed;
-  currentSpeed = 0;
-  motor1.setSpeed(motor_speed);
-  motor1.run(RELEASE);
+  pinMode(m1EnablePin, OUTPUT);
+  pinMode(m1Output1, OUTPUT);
+  pinMode(m1Output2, OUTPUT);
+  pinMode(m2EnablePin, OUTPUT);
+  pinMode(m2Output1, OUTPUT);
+  pinMode(m2Output2, OUTPUT);
 
-  motor2.setSpeed((unsigned int)(motor_speed * 1.12));
-  motor2.run(RELEASE);
+  // Make sure initialised to a stopped status
+  Stop();
 }
 
 void MotorController::Update(unsigned long microsSinceBoot)
@@ -27,14 +28,6 @@ void MotorController::Update(unsigned long microsSinceBoot)
     // Stop the motors if we have passed end time
     Stop();
     return;
-  }
-
-  // Speed up motor from insitial start
-  if (currentSpeed < motorSpeed)
-  {
-    currentSpeed++;
-    motor1.setSpeed(currentSpeed);
-    motor2.setSpeed(currentSpeed);
   }
 }
 
@@ -48,11 +41,31 @@ void MotorController::StartRunning(unsigned long startTime, unsigned int motor1D
   motorIsRunning = true;
   motorEndTime = startTime + howLongToRun;
 
-  // Start at speed of 100 so not instant power
-  currentSpeed = 100;
+  switch (motor1Direction)
+  {
+  case FORWARD:
+    digitalWrite(m1Output1, LOW);
+    digitalWrite(m1Output2, HIGH);
+    digitalWrite(m2Output1, LOW);
+    digitalWrite(m2Output2, HIGH);
+    break;
 
-  motor1.run(motor1Direction);
-  motor2.run(motor2Direction);
+  case BACKWARD:
+    digitalWrite(m1Output1, HIGH);
+    digitalWrite(m1Output2, LOW);
+    digitalWrite(m2Output1, HIGH);
+    digitalWrite(m2Output2, LOW);
+    break;
+
+  default:
+    // If there is an unknown state then stop and return (fail safe)
+    Stop();
+    return;
+  }
+
+  // Enable motors
+  digitalWrite(m1EnablePin, HIGH);
+  digitalWrite(m2EnablePin, HIGH);
 }
 
 void MotorController::Forward(unsigned long microsSinceBoot, unsigned long howLongToRun)
@@ -84,9 +97,8 @@ void MotorController::Stop()
   motorStatus = MOTOR_STATUS_STOPPED;
   motorIsRunning = false;
   motorEndTime = 0;
-  currentSpeed = 0;
-  motor1.setSpeed(0);
-  motor2.setSpeed(0);
-  motor1.run(RELEASE);
-  motor2.run(RELEASE);
+
+  // Disable motor drivers
+  digitalWrite(m1EnablePin, LOW);
+  digitalWrite(m2EnablePin, LOW);
 }

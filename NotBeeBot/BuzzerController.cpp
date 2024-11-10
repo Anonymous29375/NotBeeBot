@@ -1,19 +1,24 @@
-#include "SoundController.h"
+#include "BuzzerController.h"
 
-void SoundController::Initialise(int buzzerPin)
+void BuzzerController::Initialise(int buzzerPin)
 {
   this->buzzerPin = buzzerPin;
   pinMode(this->buzzerPin, OUTPUT);
 }
 
-void SoundController::On(unsigned long microsSinceStart, unsigned long duration)
+void BuzzerController::On(unsigned long microsSinceStart, unsigned long duration)
 {
   digitalWrite(this->buzzerPin, HIGH);
   soundEndTime = microsSinceStart + duration;
   soundOn = true;
 }
 
-void SoundController::Update(unsigned long microsSinceStart)
+void BuzzerController::Off()
+{
+  soundOn = false;
+}
+
+void BuzzerController::Update(unsigned long microsSinceStart)
 {
   if (soundOn == false || microsSinceStart > soundEndTime)
   {
